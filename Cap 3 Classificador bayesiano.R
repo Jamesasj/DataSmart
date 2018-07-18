@@ -6,15 +6,26 @@
 library(tidyr)
 library(dplyr)
 library(tidytext)
-library(tm)
 
 setwd("/home/james/Documents/data smart")
 criar_dicionario <- function(dataset){
+  peso_out_dataset = .00005 
   dataset.df <- data_frame(documento = 1:length(dataset$Tweet), texto = dataset$Tweet)
   dataset.tokens <- dataset.df %>% unnest_tokens(palavra, texto)
-  dataset.dic <- dataset.df %>% count(documento, palavra, sort = TRUE)
-  dataset.dic$probabilidade <- dados.dic.mandril$n/sum(dados.dic.mandril$n)
+  dataset.dic <- dataset.tokens %>% count(documento, palavra, sort = TRUE)
+  dataset.dic$probabilidade <- dataset.dic$n/sum(dataset.dic$n)
   return(dataset.dic)
+}
+
+peso_out_dataset <- .0005
+calcular_score <- function(dataset, dicionario){
+  score = 0
+  palavras_in_dataset <- intersect(dicionario$palavra, dataset$palavra)
+  palavras_out_dataset <- setdiff(dataset$palavra, palavras_in_dataset)
+  score <- score + length(palavras_out_dataset) * log(peso_out_dataset)
+  probabilidades <- dicionario$probabilidade[match(palavras_in_dataset, dicionario$palavra)]
+  score <- score + sum(log(probabilidades))
+  return(score)
 }
 
 dados.mandril <- read.csv('cap3_relacionados.csv', header = TRUE, sep = ";" )
@@ -25,22 +36,22 @@ dados.mandril$Tweet  <- as.character(dados.mandril$Tweet)
 dados.nao_mandril$Tweet <- as.character(dados.nao_mandril$Tweet)
 dados.teste$Tweet <- as.character(dados.teste$Tweet)
 
-dados.df.mandril <- data_frame(documento = 1:150, texto = dados.mandril$Tweet)
-dados.df.nao_mandril <- data_frame(documento = 1:150, texto = dados.nao_mandril$Tweet)
-dados.df.teste <- data_frame(documento = 1:20, texto = dados.teste$Tweet, classificacao = dados.teste$Class)
+dados.dic.mandril <- criar_dicionario(dados.mandril)
+dados.dic.nao_mandril <- criar_dicionario(dados.nao_mandril)
 
-dados.tokens.mandril <- dados.df.mandril %>% unnest_tokens(palavra, texto)
-dados.tokens.nao_mandril <- dados.df.nao_mandril %>% unnest_tokens(palavra, texto)
+dados.df.teste <- data_frame(documento = dados.teste$Number, texto = dados.teste$Tweet)
+dados.tokens.teste <- dados.df.teste %>% unnest_tokens(palavra, texto)
 
-dados.dic.mandril <- dados.tokens.mandril %>% count(documento, palavra, sort = TRUE)
-dados.dic.nao_mandril <-dados.tokens.nao_mandril %>% count(palavra, sort = TRUE)
+score <- matrix(ncol = 3, nrow = 0, dimnames = list( c(),c("mandril","nao_mandril","Classificacao")))
 
-dados.dic.mandril$n_mais_um <- dados.dic.mandril$n+1
-total <- sum(dados.dic.mandril$n_mais_um)
-dados.dic.mandril$probabilidade <- dados.dic.mandril$n_mais_um/total 
+for(i in 1:length(dados.df.teste$documento)){
+  palavras <- dados.tokens.teste %>% filter(documento == i)
+  app <- calcular_score(palavras, dados.dic.mandril)
+  nao_app <- calcular_score(palavras, dados.dic.nao_mandril)
+  classi <- ifelse(app > nao_app, "App", "Other")
+  aux <- cbind(app ,nao_app, classi)
+  score <- rbind(score, aux)
+}
 
-dados.dic.nao_mandril$n_mais_um <- dados.dic.nao_mandril$n+1
-total <- sum(dados.dic.nao_mandril$n_mais_um)
-dados.dic.nao_mandril$probabilidade <- dados.dic.nao_mandril$n_mais_um/total 
-
+result <- cbind(dados.teste, score)
 
