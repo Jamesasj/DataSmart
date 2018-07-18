@@ -9,7 +9,6 @@ library(tidytext)
 
 setwd("/home/james/Documents/data smart")
 criar_dicionario <- function(dataset){
-  peso_out_dataset = .00005 
   dataset.df <- data_frame(documento = 1:length(dataset$Tweet), texto = dataset$Tweet)
   dataset.tokens <- dataset.df %>% unnest_tokens(palavra, texto)
   dataset.dic <- dataset.tokens %>% count(documento, palavra, sort = TRUE)
@@ -17,7 +16,7 @@ criar_dicionario <- function(dataset){
   return(dataset.dic)
 }
 
-peso_out_dataset <- .0005
+peso_out_dataset <- .00005
 calcular_score <- function(dataset, dicionario){
   score = 0
   palavras_in_dataset <- intersect(dicionario$palavra, dataset$palavra)
